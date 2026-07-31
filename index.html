@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Davin Kim — Generative Models</title>
+<meta name="description" content="Davin Kim · AI Graduate Student · Generative Models (Diffusion, Flow Matching)">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&family=Noto+Serif+KR:wght@400;600&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --sky-100:#eef6ff;
+    --sky-200:#dcecfc;
+    --sky-300:#bfe0fa;
+    --lav-200:#e8def7;
+    --lav-300:#d8c9f0;
+    --violet-400:#a68cd6;
+    --violet-500:#8b6fce;
+    --violet-700:#5f4a9c;
+    --ink-900:#2b2740;
+    --ink-600:#5a5470;
+    --paper:rgba(255,255,255,0.58);
+    --paper-strong:rgba(255,255,255,0.78);
+    --line:rgba(139,111,206,0.22);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+
+  body{
+    margin:0;
+    font-family:'Inter','Noto Sans KR',sans-serif;
+    font-weight:400;
+    color:var(--ink-900);
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 0%, var(--sky-200) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 60% at 85% 15%, var(--lav-200) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 70% at 50% 100%, var(--sky-100) 0%, transparent 60%),
+      linear-gradient(180deg, #f5f7fd 0%, #eef1fb 50%, #f3eefb 100%);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  #flow-canvas{
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:0;
+    opacity:0.55;
+    pointer-events:none;
+  }
+
+  .site-shell{
+    position:relative;
+    z-index:1;
+  }
+
+  h1,h2,h3{
+    font-family:'Fraunces','Noto Serif KR',serif;
+    font-weight:500;
+    letter-spacing:-0.01em;
+    margin:0;
+    color:var(--ink-900);
+  }
+
+  a{color:var(--violet-700); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  a:focus-visible, button:focus-visible{
+    outline:2px solid var(--violet-500);
+    outline-offset:3px;
+    border-radius:4px;
+  }
+
+  /* ---------- Nav ---------- */
+  nav#topnav{
+    position:fixed;
+    top:22px;
+    right:22px;
+    z-index:50;
+    display:flex;
+    gap:2px;
+    padding:6px;
+    background:var(--paper);
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    border:1px solid var(--line);
+    border-radius:999px;
+    box-shadow:0 8px 30px rgba(95,74,156,0.10);
+  }
+  nav#topnav a{
+    font-family:'Inter','Noto Sans KR',sans-serif;
+    font-size:0.78rem;
+    font-weight:500;
+    letter-spacing:0.02em;
+    color:var(--ink-600);
+    text-decoration:none;
+    padding:8px 14px;
+    border-radius:999px;
+    transition:background 0.25s ease, color 0.25s ease;
+    white-space:nowrap;
+  }
+  nav#topnav a:hover{
+    background:var(--sky-200);
+    color:var(--ink-900);
+  }
+  nav#topnav a.active{
+    background:var(--violet-500);
+    color:#fff;
+  }
+
+  @media (max-width:720px){
+    nav#topnav{
+      top:0; right:0; left:0;
+      border-radius:0;
+      justify-content:flex-start;
+      overflow-x:auto;
+      gap:0;
+      padding:8px 10px;
+      -webkit-overflow-scrolling:touch;
+    }
+    nav#topnav a{padding:7px 11px; font-size:0.74rem;}
+  }
+
+  /* ---------- Layout ---------- */
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:0 28px;
+  }
+
+  header.hero{
+    min-height:92vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding-top:80px;
+  }
+  .eyebrow{
+    font-size:0.8rem;
+    font-weight:600;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--violet-700);
+    margin-bottom:18px;
+  }
+  header.hero h1{
+    font-size:clamp(2.6rem, 7vw, 4.4rem);
+    line-height:1.05;
+  }
+  header.hero h1 .kr{
+    font-family:'Noto Serif KR',serif;
+    font-weight:400;
+    color:var(--ink-600);
+    font-size:0.5em;
+    margin-left:0.4em;
+  }
+  .tagline{
+    font-family:'Fraunces','Noto Serif KR',serif;
+    font-style:italic;
+    font-weight:400;
+    font-size:clamp(1.15rem, 2.6vw, 1.5rem);
+    color:var(--violet-700);
+    margin-top:20px;
+    max-width:32ch;
+  }
+  .lede{
+    margin-top:26px;
+    font-size:1.02rem;
+    line-height:1.75;
+    color:var(--ink-600);
+    max-width:52ch;
+  }
+  .contact-row{
+    margin-top:34px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .contact-row a{
+    font-size:0.85rem;
+    font-weight:500;
+    color:var(--ink-900);
+    background:var(--paper-strong);
+    border:1px solid var(--line);
+    padding:9px 16px;
+    border-radius:999px;
+    transition:transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .contact-row a:hover{
+    text-decoration:none;
+    transform:translateY(-2px);
+    box-shadow:0 6px 18px rgba(139,111,206,0.22);
+  }
+
+  /* ---------- Sections ---------- */
+  section{
+    padding:96px 0 20px;
+    scroll-margin-top:90px;
+  }
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin-bottom:38px;
+  }
+  .section-num{
+    font-family:'Fraunces',serif;
+    font-style:italic;
+    font-size:0.95rem;
+    color:var(--violet-400);
+  }
+  section h2{
+    font-size:1.9rem;
+  }
+
+  .card{
+    background:var(--paper);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:26px 28px;
+    margin-bottom:18px;
+  }
+
+  /* About */
+  .about-grid p{
+    line-height:1.85;
+    color:var(--ink-600);
+    font-size:1rem;
+  }
+  .about-grid p + p{margin-top:16px;}
+  .about-grid strong{color:var(--ink-900); font-weight:600;}
+
+  /* Research */
+  .research-focus{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:30px;
+  }
+  .focus-pill{
+    font-size:0.82rem;
+    font-weight:500;
+    padding:7px 15px;
+    border-radius:999px;
+    background:linear-gradient(120deg, var(--sky-300), var(--lav-300));
+    color:var(--ink-900);
+  }
+  .entry-title{
+    font-family:'Fraunces','Noto Serif KR',serif;
+    font-weight:600;
+    font-size:1.08rem;
+    color:var(--ink-900);
+  }
+  .entry-meta{
+    font-size:0.82rem;
+    color:var(--violet-700);
+    font-weight:500;
+    margin-top:2px;
+  }
+  .entry-body{
+    margin-top:10px;
+    font-size:0.94rem;
+    line-height:1.7;
+    color:var(--ink-600);
+  }
+
+  /* Education / Awards / Projects lists */
+  .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .row + .entry-body{margin-bottom:4px;}
+  .date{
+    font-size:0.8rem;
+    color:var(--ink-600);
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .card + .card{margin-top:16px;}
+
+  /* &c. */
+  .etc-block{margin-bottom:30px;}
+  .etc-block h3{
+    font-size:1.02rem;
+    font-family:'Inter','Noto Sans KR',sans-serif;
+    font-weight:600;
+    color:var(--violet-700);
+    margin-bottom:14px;
+    letter-spacing:0.01em;
+  }
+  .etc-block ul{
+    margin:0;
+    padding:0;
+    list-style:none;
+  }
+  .etc-block li{
+    font-size:0.92rem;
+    line-height:1.6;
+    color:var(--ink-600);
+    padding:9px 0;
+    border-bottom:1px dashed var(--line);
+    display:flex;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .etc-block li:last-child{border-bottom:none;}
+  .etc-block li span:first-child{color:var(--ink-900);}
+  .etc-block li span:last-child{
+    font-size:0.8rem;
+    color:var(--violet-700);
+    white-space:nowrap;
+  }
+  .skill-tags{display:flex; flex-wrap:wrap; gap:8px;}
+  .skill-tags span{
+    font-size:0.8rem;
+    padding:6px 13px;
+    border-radius:999px;
+    background:var(--sky-200);
+    color:var(--ink-900);
+  }
+
+  footer{
+    padding:70px 0 50px;
+    text-align:center;
+  }
+  footer p{
+    font-size:0.8rem;
+    color:var(--ink-600);
+  }
+
+  @media (max-width:600px){
+    .wrap{padding:0 20px;}
+    header.hero{min-height:auto; padding-top:110px; padding-bottom:40px;}
+    section{padding:60px 0 10px;}
+    .card{padding:20px 20px;}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="flow-canvas" aria-hidden="true"></canvas>
+
+<nav id="topnav" aria-label="Section navigation">
+  <a href="#about">About</a>
+  <a href="#research">Research</a>
+  <a href="#education">Education</a>
+  <a href="#awards">Awards</a>
+  <a href="#projects">Projects</a>
+  <a href="#etc">&amp;c.</a>
+</nav>
+
+<div class="site-shell">
+  <div class="wrap">
+
+    <header class="hero" id="top">
+      <p class="eyebrow">AI Graduate School · Generative Models</p>
+      <h1>Davin Kim<span class="kr">김다빈</span></h1>
+      <p class="tagline">Watching noise become structure — one denoising step at a time.</p>
+      <p class="lede">
+        I'm a graduate student researching <strong>generative models</strong>, with a focus on
+        <strong>diffusion models</strong> and <strong>flow matching</strong>. I'm interested in the
+        theory and design of continuous-time generative processes, and how they can be made
+        faster, more controllable, and better understood.
+      </p>
+      <div class="contact-row">
+        <a href="mailto:davinkim0706@naver.com">davinkim0706@naver.com</a>
+        <a href="https://velog.io/@davin0706" target="_blank" rel="noopener">Blog ↗</a>
+        <a href="https://github.com/davinkim03" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+    </header>
+
+    <section id="about">
+      <div class="section-head">
+        <span class="section-num">01</span>
+        <h2>About</h2>
+      </div>
+      <div class="card about-grid">
+        <p>
+          I'm currently a graduate student in an <strong>AI Graduate School</strong>, working on
+          generative modeling. My research centers on <strong>diffusion models</strong> and
+          <strong>flow matching</strong> — I'm drawn to the way these methods turn a simple noise
+          distribution into complex, structured data through a learned trajectory, and to the open
+          questions around sampling efficiency, guidance, and the theoretical connections between
+          the two frameworks.
+        </p>
+        <p>
+          Before starting graduate study, I completed my B.S. in Computer Science at Kyungsung
+          University, where I worked on applied machine learning and web-based projects, and spent
+          a summer as a research intern investigating meta-learning theory.
+        </p>
+      </div>
+    </section>
+
+    <section id="research">
+      <div class="section-head">
+        <span class="section-num">02</span>
+        <h2>Research</h2>
+      </div>
+      <div class="research-focus">
+        <span class="focus-pill">Diffusion Models</span>
+        <span class="focus-pill">Flow Matching</span>
+        <span class="focus-pill">Generative Modeling</span>
+        <span class="focus-pill">Meta-Learning</span>
+      </div>
+      <div class="card">
+        <div class="row">
+          <span class="entry-title">Undergraduate Summer Research Program (U-SURF)</span>
+          <span class="date">Jul 2025</span>
+        </div>
+        <p class="entry-meta">UNIST · MIIT Lab · Advisor: Prof. Sung Whan Yoon</p>
+        <p class="entry-body">
+          Studied meta-learning theory and reviewed related literature as part of a summer
+          research internship at UNIST's MIIT Lab.
+        </p>
+      </div>
+    </section>
+
+    <section id="education">
+      <div class="section-head">
+        <span class="section-num">03</span>
+        <h2>Education</h2>
+      </div>
+      <div class="card">
+        <div class="row">
+          <span class="entry-title">Kyungsung University</span>
+          <span class="date">Mar 2022 – Feb 2026</span>
+        </div>
+        <p class="entry-meta">B.S. in Computer Science · Busan, Korea</p>
+        <p class="entry-body">GPA 4.275 / 4.5</p>
+      </div>
+    </section>
+
+    <section id="awards">
+      <div class="section-head">
+        <span class="section-num">04</span>
+        <h2>Awards</h2>
+      </div>
+      <div class="card">
+        <div class="row">
+          <span class="entry-title">Grand Award</span>
+          <span class="date">Jul 2024</span>
+        </div>
+        <p class="entry-meta">Asian Student's Capstone Design Contest 2024 (ASCC), Sojo University, Japan</p>
+        <p class="entry-body">For "Development of a Sign Language Learning System Using Generative AI."</p>
+      </div>
+      <div class="card">
+        <div class="row">
+          <span class="entry-title">Grand Prize</span>
+          <span class="date">Jul 2024</span>
+        </div>
+        <p class="entry-meta">2024 Shared Enterprise–University Cooperation Innovation Capstone</p>
+        <p class="entry-body">Awarded by the Busan Business Agency for a collaborative capstone project.</p>
+      </div>
+    </section>
+
+    <section id="projects">
+      <div class="section-head">
+        <span class="section-num">05</span>
+        <h2>Projects</h2>
+      </div>
+      <div class="card">
+        <p class="entry-title">AI-Powered Code Security Analyzer</p>
+        <p class="entry-body">An AI-based analyzer API service that detects security vulnerabilities in user-submitted code.</p>
+      </div>
+      <div class="card">
+        <p class="entry-title">Sign Language Learning System Using Generative AI</p>
+        <p class="entry-body">A generative-AI-driven system for sign language education, developed for the Asian Student's Capstone Design Contest 2024.</p>
+      </div>
+      <div class="card">
+        <p class="entry-title">Shared Enterprise–University Cooperative Innovation Project</p>
+        <p class="entry-body">Renovated the website of a local sharing-economy company in collaboration with an industry partner.</p>
+      </div>
+    </section>
+
+    <section id="etc">
+      <div class="section-head">
+        <span class="section-num">06</span>
+        <h2>&amp;c.</h2>
+      </div>
+      <div class="card">
+
+        <div class="etc-block">
+          <h3>Skills</h3>
+          <div class="skill-tags">
+            <span>Python</span><span>PyTorch</span><span>C / C++</span><span>Java</span>
+            <span>MySQL</span><span>NumPy</span><span>Pandas</span><span>scikit-learn</span>
+            <span>Matplotlib</span><span>Seaborn</span>
+          </div>
+        </div>
+
+        <div class="etc-block">
+          <h3>Certificates</h3>
+          <ul>
+            <li><span>Engineer Information Processing (정보처리기사)</span><span>Jun 2025</span></li>
+            <li><span>SQL Developer (SQLD)</span><span>Jun 2024</span></li>
+          </ul>
+        </div>
+
+        <div class="etc-block">
+          <h3>Teaching Experience</h3>
+          <ul>
+            <li><span>Assistant Instructor, Intel Edge AI SW Academy — Object-Oriented Programming</span><span>2023–2024</span></li>
+            <li><span>Assistant Instructor, Future-Promising Fields Program (IoT / Network)</span><span>2024</span></li>
+            <li><span>Assistant Instructor, K-Digital Training — Intel AI Convergence DX Master Class</span><span>2024</span></li>
+          </ul>
+        </div>
+
+        <div class="etc-block">
+          <h3>Scholarships</h3>
+          <ul>
+            <li><span>Academic Excellence Mileage Scholarship, Kyungsung University</span><span>Fall 2022 – Fall 2024</span></li>
+            <li><span>Kyungsung Scholarship (Tuition Waiver)</span><span>Fall 2022, Fall 2023</span></li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <footer>
+      <p>Davin Kim · 김다빈 &nbsp;·&nbsp; last updated 2026</p>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+  // Active nav highlighting
+  (function(){
+    const links = document.querySelectorAll('#topnav a');
+    const sections = document.querySelectorAll('section[id]');
+    const map = {};
+    links.forEach(l => map[l.getAttribute('href').slice(1)] = l);
+
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const link = map[entry.target.id];
+        if(!link) return;
+        if(entry.isIntersecting){
+          links.forEach(l => l.classList.remove('active'));
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+
+    sections.forEach(s => obs.observe(s));
+  })();
+
+  // Ambient flow-field background — gentle trajectories evoking
+  // diffusion / flow-matching sample paths. Skips entirely if the
+  // visitor prefers reduced motion.
+  (function(){
+    const canvas = document.getElementById('flow-canvas');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const ctx = canvas.getContext('2d');
+    let w, h, dpr;
+    let particles = [];
+    const COUNT = 46;
+
+    const palette = ['#8b6fce', '#a68cd6', '#7ea9e0', '#c9b6e4', '#93c1e8'];
+
+    function resize(){
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+
+    function noiseField(x, y, t){
+      // simple layered sine field -> smooth pseudo-flow vectors
+      const a = Math.sin(x*0.0022 + t*0.00018) + Math.cos(y*0.0026 - t*0.00013);
+      const b = Math.cos((x+y)*0.0016 + t*0.00021);
+      return a * 1.4 + b;
+    }
+
+    function makeParticle(){
+      return {
+        x: Math.random()*w,
+        y: Math.random()*h,
+        life: 0,
+        maxLife: 260 + Math.random()*260,
+        color: palette[Math.floor(Math.random()*palette.length)],
+        trail: []
+      };
+    }
+
+    function init(){
+      resize();
+      particles = Array.from({length:COUNT}, makeParticle);
+    }
+
+    let t = 0;
+    function step(){
+      t += 16;
+      ctx.clearRect(0,0,w,h);
+
+      particles.forEach(p => {
+        const angle = noiseField(p.x, p.y, t) * Math.PI;
+        const speed = 0.55;
+        p.x += Math.cos(angle) * speed * 2.1;
+        p.y += Math.sin(angle) * speed * 2.1;
+        p.life++;
+        p.trail.push([p.x, p.y]);
+        if(p.trail.length > 42) p.trail.shift();
+
+        if(p.life > p.maxLife || p.x < -50 || p.x > w+50 || p.y < -50 || p.y > h+50){
+          Object.assign(p, makeParticle(), { x: Math.random()*w, y: Math.random()*h, trail: [] });
+        }
+
+        if(p.trail.length > 2){
+          ctx.beginPath();
+          ctx.moveTo(p.trail[0][0], p.trail[0][1]);
+          for(let i=1;i<p.trail.length;i++){
+            ctx.lineTo(p.trail[i][0], p.trail[i][1]);
+          }
+          const fade = 1 - p.life / p.maxLife;
+          ctx.strokeStyle = p.color;
+          ctx.globalAlpha = Math.max(fade,0) * 0.35;
+          ctx.lineWidth = 1.1;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      });
+
+      if(!reduceMotion){
+        requestAnimationFrame(step);
+      }
+    }
+
+    window.addEventListener('resize', resize);
+    init();
+
+    if(!reduceMotion){
+      requestAnimationFrame(step);
+    } else {
+      // draw a single static-looking frame of trajectories, no loop
+      for(let i=0;i<160;i++){ t += 16; particles.forEach(p=>{}); }
+      step();
+    }
+  })();
+</script>
+
+</body>
+</html>

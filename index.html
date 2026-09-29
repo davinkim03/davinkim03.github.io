@@ -174,6 +174,37 @@
     color:var(--ink-600);
     max-width:52ch;
   }
+
+    .hero-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:48px;
+  }
+  .hero-text{
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .lede-photo{
+    flex:0 0 auto;
+    height:370px;
+    width:auto;
+    border-radius:24px;
+    box-shadow:0 16px 40px rgba(139,111,206,0.32);
+  }
+  @media (max-width:760px){
+    .hero-row{
+      flex-direction:column-reverse;
+      align-items:center;
+      text-align:center;
+      gap:32px;
+    }
+    .hero-text{width:100%;}
+    .lede{max-width:100%;}
+    .contact-row{justify-content:center;}
+    .lede-photo{height:auto; width:220px;}
+  }
+
   .contact-row{
     margin-top:34px;
     display:flex;
@@ -356,17 +387,22 @@
 
     <header class="hero" id="top">
       <p class="eyebrow"> Integrated M.S.-Ph.D. Student, Graduate School of AI, UNIST</p>
-      <h1>Davin Kim</h1>
-      <p class="lede">
-        Welcome to my website! As a first year student in the integrated M.S.-Ph.D. program
-        at <strong>UNIST's Graduate School of Artificial Intelligence</strong>.
-        I am fortunate to be part of the <strong><a href="https://aga-lab-ai.github.io/" target="_blank" rel="noopener">AGA Lab</a></strong>,
-        where I work under the supervision of Prof. Sangwoong Yoon. My research interests include Generative Modeling and AI4Science, particularly 3D molecule generation problem.
-        Looking forward to sharing this journey with you 😊
-      </p>
-      <div class="contact-row">
-        <a href="www.linkedin.com/in/davin-kim-bbbb1336b" target="_blank" rel="noopener">LinkedIn ↗</a>
-        <a href="https://github.com/davinkim03" target="_blank" rel="noopener">GitHub ↗</a>
+      <div class="hero-row">
+        <div class="hero-text">
+          <h1>Davin Kim</h1>
+          <p class="lede">
+            Welcome to my website! As a first year student in the integrated M.S.-Ph.D. program
+            at <strong>UNIST's Graduate School of Artificial Intelligence</strong>.
+            I am fortunate to be part of the <strong><a href="https://aga-lab-ai.github.io/" target="_blank" rel="noopener">AGA Lab</a></strong>,
+            where I work under the supervision of Prof. Sangwoong Yoon. My research interests include Generative Modeling and AI4Science, particularly 3D molecule generation problem.
+            Looking forward to sharing this journey with you 😊
+          </p>
+          <div class="contact-row">
+            <a href="www.linkedin.com/in/davin-kim-bbbb1336b" target="_blank" rel="noopener">LinkedIn ↗</a>
+            <a href="https://github.com/davinkim03" target="_blank" rel="noopener">GitHub ↗</a>
+          </div>
+        </div>
+        <img class="lede-photo" src="./profile.jpg" alt="Davin Kim">
       </div>
     </header>
 
